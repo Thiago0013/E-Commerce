@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/client")
+@RequestMapping
 public class ClientController {
 
     final ClientService clientService;
@@ -18,8 +18,4 @@ public class ClientController {
         this.clientService = clientService;
     }
 
-    @PostMapping("/register")
-    public Client register(@RequestBody ClientDTO dto){
-        return clientService.register(dto);
-    }
 }
