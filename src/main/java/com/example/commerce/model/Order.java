@@ -1,5 +1,6 @@
 package com.example.commerce.model;
 
+import com.example.commerce.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -30,6 +31,9 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "cliente_id")
     private Client client;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL)
     @JsonIgnore

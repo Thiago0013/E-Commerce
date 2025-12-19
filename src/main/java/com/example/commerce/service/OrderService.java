@@ -2,6 +2,7 @@ package com.example.commerce.service;
 
 import com.example.commerce.dto.OrderDTO;
 import com.example.commerce.dto.OrderItemDTO;
+import com.example.commerce.enums.OrderStatus;
 import com.example.commerce.model.Client;
 import com.example.commerce.model.Order;
 import com.example.commerce.model.OrderItem;
@@ -30,7 +31,6 @@ public class OrderService {
         this.orderRepository = orderRepository;
     }
 
-    @Transactional
     public Order addOrder(OrderDTO dto, String email){
 
         Client client = (Client) clientRepository.findByEmail(email);
@@ -39,19 +39,12 @@ public class OrderService {
         order.setClient(client);
         order.setDataPedido(LocalDateTime.now());
         order.setItens(new ArrayList<>());
+        order.setStatus(OrderStatus.AGUARDANDO_PAGAMENTO);
 
         BigDecimal total = BigDecimal.ZERO;
         for(OrderItemDTO itemDTO : dto.itens()){
             Product produto = productRepository.findById(itemDTO.produtoId())
                     .orElseThrow(() -> new RuntimeException("Produto não encontrado ID: " + itemDTO.produtoId()));
-
-            if(itemDTO.quantidade() > produto.getQuantidadeEstoque()){
-                throw new RuntimeException("Estoque insuficiente para o produto de ID:" + itemDTO.produtoId());
-            }
-
-            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() - itemDTO.quantidade());
-            System.out.println(produto.getQuantidadeEstoque());
-            productRepository.save(produto);
 
             OrderItem orderItem = new OrderItem();
             orderItem.setPedido(order);
@@ -75,5 +68,31 @@ public class OrderService {
         Client client = (Client) clientRepository.findByEmail(email);
 
         return orderRepository.findAllByClient(client);
+    }
+
+    @Transactional
+    public Order finish(String email, Long id){
+
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Pedido não encontrado."));
+
+        if(!order.getClient().getEmail().equals(email)){
+            throw new RuntimeException("Este pedido não pertence a você!");
+        }
+        if(order.getStatus() != OrderStatus.AGUARDANDO_PAGAMENTO){
+            throw new RuntimeException("Erro: Este produto não pode ser finalizado!");
+        }
+
+        for(OrderItem item : order.getItens()) {
+            Product product = item.getProduto();
+
+            if (product.getQuantidadeEstoque() < item.getQuantidade()) {
+                throw new RuntimeException("Erro: Quantidade em estoque insuficiente.");
+            }
+
+            product.setQuantidadeEstoque(product.getQuantidadeEstoque() - item.getQuantidade());
+            productRepository.save(product);
+        }
+        order.setStatus(OrderStatus.FINALIZADO);
+        return orderRepository.save(order);
     }
 }
